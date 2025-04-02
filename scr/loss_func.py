@@ -86,8 +86,7 @@ class SPLC(nn.Module):
         else:
             return loss
 class AsymmetricLossOptimized(nn.Module):
-    '''
-    ASL loss as described in the paper "Asymmetric Loss For Multi-Label Classificatio"
+    '''ASL loss as described in the paper "Asymmetric Loss For Multi-Label Classification"
     Notice - optimized version, minimizes memory allocation and gpu uploading,
     favors inplace operations'''
 
@@ -147,8 +146,7 @@ class AsymmetricLossOptimized(nn.Module):
 
 
 class DRLoss(nn.Module):
-    r"""
-    DRLoss is proposed by us in the paper "Dynamically Robust Loss: Unlocking Noisy-Label Learning in Named Entity Recognition "
+    r"""DRLoss is proposed by us in the paper "Dynamically Robust Loss: Unlocking Noisy-Label Learning in Named Entity Recognition "
         """
     def __init__(self,beta=0.,robust=True):
         super(DRLoss, self).__init__()
@@ -251,8 +249,7 @@ class Hill(nn.Module):
 
 
 class Symmetric_CELoss(nn.Module):
-    '''
-        Symmetric_CELoss as described in the paper "Symmetric cross entropy for robust learning with noisy labels"
+    ''' Symmetric_CELoss as described in the paper "Symmetric cross entropy for robust learning with noisy labels"
     '''
     def __init__(self, alpha=1, beta=1):
         super(Symmetric_CELoss, self).__init__()
@@ -332,9 +329,8 @@ def _expand_binary_labels(labels, label_weights, label_channels):
 
 
 class GHMC(nn.Module):
+    '''GHMC as described in the paper " Gradient harmonized single-stage detector."
     '''
-                GHMC as described in the paper " Gradient harmonized single-stage detector."
-            '''
     def __init__(
             self,
             bins=10,
@@ -398,7 +394,7 @@ class GHMC(nn.Module):
 
 class Boundary_smoothing(nn.Module):
     '''
-                Boundary_smoothing as described in the paper "  Boundary smoothing for named entity recognition."
+    Boundary_smoothing as described in the paper "  Boundary smoothing for named entity recognition."
             '''
     def __init__(self, sb_epsilon=0.1, sb_size=1, reduction='mean'):
         super(Boundary_smoothing, self).__init__()
