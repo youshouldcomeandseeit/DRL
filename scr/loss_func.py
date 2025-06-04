@@ -430,7 +430,70 @@ class Boundary_smoothing(nn.Module):
 
         loss = BCELoss(predict,boundary2label_id,mask)
         return loss
+class large_loss_matters(nn.Module):
+    def __init__(self,deta_rel=0.):
+        super(large_loss_matters, self).__init__()
+        self.deta_rel = deta_rel
+    def loss_an(self, logits, observed_labels):
+        assert torch.min(observed_labels) >= 0
+        # compute loss:
+        loss_matrix = F.binary_cross_entropy_with_logits(logits, observed_labels, reduction='none')
+        corrected_loss_matrix = F.binary_cross_entropy_with_logits(logits, torch.logical_not(observed_labels).float(),
+                                                                   reduction='none')
+        return loss_matrix, corrected_loss_matrix
 
+    def forward(self, preds, label_vec, epoch):  # "preds" are actually logits (not sigmoid activated !)
+        clean_rate = 1. - self.deta_rel * epoch
+
+        assert preds.dim() == 2
+
+        batch_size = int(preds.size(0))
+        num_classes = int(preds.size(1))
+
+        unobserved_mask = (label_vec == 0)
+
+        # compute loss for each image and class:
+        loss_matrix, corrected_loss_matrix = self.loss_an(preds, label_vec.clip(0))
+
+        if clean_rate == 1.:  # if epoch is 1, do not modify losses
+            final_loss_matrix = loss_matrix
+        else:
+            k = math.ceil(batch_size * num_classes * (1 - clean_rate))
+            unobserved_loss = unobserved_mask.bool() * loss_matrix
+            topk = torch.topk(unobserved_loss.flatten(), k)
+            topk_lossvalue = topk.values[-1]
+            final_loss_matrix = torch.where(unobserved_loss < topk_lossvalue, loss_matrix, corrected_loss_matrix)
+
+        main_loss = final_loss_matrix.mean()
+
+        return main_loss
+
+
+class DRLoss(nn.Module):
+    def __init__(self,gamma1=5, gamma2=7,):
+        super(DRLoss,self).__init__()
+        self.gamma1 = gamma1
+        self.gamma2 = gamma2
+
+    def forward(self,cls_score,labels):
+
+        cls_score0 = cls_score.clone()
+        cls_score0 = (1 - 2 * labels) * cls_score0
+        neg_score = cls_score0 - labels * 1e12
+        pos_score = cls_score0 - (1 - labels) * 1e12
+
+        ## positive scores and negative scores
+        s_p0 = pos_score * self.gamma1
+        s_n0 = self.gamma1 * neg_score
+
+        terms = torch.stack([
+            torch.zeros_like(torch.logsumexp(s_n0, dim=0)) ,
+            torch.logsumexp(s_p0, dim=0) + torch.logsumexp(s_n0, dim=0),
+            # torch.logsumexp(neg_score * self.gamma2, dim=0)
+        ])
+        loss_dr = torch.logsumexp(terms, dim=0)
+
+        return loss_dr
 
 
 
