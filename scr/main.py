@@ -193,10 +193,10 @@ class Trainer(object):
 
 
 def loss_function(pred, true, mask, default_span_mask, epoch):
-    # beta = 0.15 * math.log(epoch + 1)
-    # sample_loss, class_loss = loss_func.TwoWayLoss(beta,robust=True)(pred, true, mask)
-    # _alpha = 1. - math.exp(- 0.15 * (epoch + 1))
-    # loss = (_alpha) * class_loss + (1 - _alpha) * sample_loss
+    beta = 0.15 * math.log(epoch + 1)
+    sample_loss, class_loss = loss_func.TwoWayLoss(beta,robust=True)(pred, true, mask)
+    _alpha = 1. - math.exp(- 0.15 * (epoch + 1))
+    loss = (_alpha) * class_loss + (1 - _alpha) * sample_loss
 
     # loss = loss_func.Boundary_smoothing(sb_epsilon=0.2, sb_size=1)(pred, true, mask)
 
@@ -206,15 +206,13 @@ def loss_function(pred, true, mask, default_span_mask, epoch):
     # loss = loss_func.Symmetric_CELoss(alpha=1.,beta=1.)(pred,true.float(),mask)
     # loss = loss_func.AsymmetricLossOptimized(gamma_neg=2, gamma_pos=1, clip=0.05)(pred,true,mask)
 
-
-    # loss = loss_func.BCELossWithLabelSmoothing(alpha=_alpha)(pred, true, mask)
     # loss = loss_func.BCELossWithLabelSmoothing(alpha=0.1)(pred, true, mask)
 
     # pred = pred[mask].view(-1,config.ent_type_size)
     # true = true[mask].view(-1,config.ent_type_size)
     # loss = loss_func.large_loss_matters(1e-7)(pred,true, epoch)
 
-    loss = loss_func.BCELoss(pred, true, mask)
+    # loss = loss_func.BCELoss(pred, true, mask)
     # loss = loss_func.BCEFocalLoss(gamma=2)(pred,true,mask)
     # loss = loss_func.ASLLoss(gamma_neg=2, gamma_pos=1)(pred,true,mask)
     # loss = loss_func.GHMC(bins=30)(pred,true,mask.float())
@@ -224,7 +222,7 @@ def loss_function(pred, true, mask, default_span_mask, epoch):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='./config/conll03_crowd.json')
+    parser.add_argument('--config', type=str, default='./config/conll03_llm.json')
     # parser.add_argument('--save_path', type=str, default='./model.pt')
     # parser.add_argument('--predict_path', type=str, default='./output.json')
     parser.add_argument('--epochs', type=int)
@@ -246,47 +244,42 @@ if __name__ == '__main__':
     train_dataset = Dataset(config.train_datasets_path,is_training=True)
     dev_dataset = Dataset(config.dev_datasets_path,is_training=False)
     test_dataset = Dataset(config.test_datasets_path)
-    score_list = []
     # logger.info(config)
 
-    for i in range(1):
-            torch.cuda.empty_cache()
-            # wandb.init(project='conll_weak',
-            #            name=f"analysis_large_loss_matter",
-            #            config=config,
-            #            resume='allow')
-            best_dev_f1 = 0.
-            max_f1 = 0.
-            max_p = 0.
-            max_r = 0.
-            # set_seed(config.seed)
-            my_model = Biaffine(config.encoder_path, config.ent_type_size, biaffine_size=120,
-                                width_embeddings_dim=20).cuda()
-            trainer = Trainer(my_model,loss_function)
+ 
+    torch.cuda.empty_cache()
+    # wandb.init(project='conll_llm',
+    #            name=f"analysis_large_loss_matter",
+    #            config=config,
+    #            resume='allow')
+    best_dev_f1 = 0.
+    max_f1 = 0.
+    max_p = 0.
+    max_r = 0.
+    # set_seed(config.seed)
+    my_model = Biaffine(config.encoder_path, config.ent_type_size, biaffine_size=120,
+                        width_embeddings_dim=20).cuda()
+    trainer = Trainer(my_model,loss_function)
 
-            for epoch in range(config.epochs):
+    for epoch in range(config.epochs):
 
-                # pos_count_bin = torch.zeros(10)
-                # neg_count_bin = torch.zeros(10)
-                torch.cuda.empty_cache()
-                trainer.train(epoch, train_dataset)
-                dev_f1 = trainer.eval(epoch, dev_dataset=dev_dataset, test_dataset=test_dataset, is_dev=True, is_test=False)
-                #
-                # if dev_f1 > best_dev_f1:
-                #
-                #     best_dev_f1 = dev_f1
-                #     test_p, test_r, test_f1 = trainer.eval(epoch, test_dataset=test_dataset, is_dev=False, is_test=True)
-                #     max_f1 = test_f1
-                #     max_p = test_p
-                #     max_r = test_r
+        torch.cuda.empty_cache()
+        trainer.train(epoch, train_dataset)
+        dev_f1 = trainer.eval(epoch, dev_dataset=dev_dataset, test_dataset=test_dataset, is_dev=True, is_test=False)
+        
+        if dev_f1 > best_dev_f1:
+        
+            best_dev_f1 = dev_f1
+            test_p, test_r, test_f1 = trainer.eval(epoch, test_dataset=test_dataset, is_dev=False, is_test=True)
+            max_f1 = test_f1
+            max_p = test_p
+            max_r = test_r
 
+    
 
+    del my_model
+    torch.cuda.empty_cache()
+    # wandb.finish()
 
-            del my_model
-            torch.cuda.empty_cache()
-            # wandb.finish()
-
-    # print(score_list)
-    # logger.info(score_list)
 
 
