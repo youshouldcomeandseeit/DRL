@@ -194,7 +194,7 @@ class Trainer(object):
 
 def loss_function(pred, true, mask, default_span_mask, epoch):
     beta = 0.15 * math.log(epoch + 1)
-    sample_loss, class_loss = loss_func.TwoWayLoss(beta,robust=True)(pred, true, mask)
+    sample_loss, class_loss = loss_func.DRLoss(beta,robust=True)(pred, true, mask)
     _alpha = 1. - math.exp(- 0.15 * (epoch + 1))
     loss = (_alpha) * class_loss + (1 - _alpha) * sample_loss
 
@@ -280,6 +280,7 @@ if __name__ == '__main__':
     del my_model
     torch.cuda.empty_cache()
     # wandb.finish()
+
 
 
 
